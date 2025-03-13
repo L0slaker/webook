@@ -30,9 +30,12 @@ func NewUserDAO(db *gorm.DB) *UserDAO {
 // TODO 未设置索引
 // TODO 未设置数据存储长度
 type User struct {
-	ID       int64  `gorm:"column:id;primaryKey;autoIncrement"`
-	Email    string `gorm:"column:email;unique"`
-	Password string `gorm:"column:password;"`
+	ID           int64  `gorm:"column:id;primaryKey;autoIncrement"`
+	Email        string `gorm:"column:email;unique"`
+	Password     string `gorm:"column:password;"`
+	Nickname     string `gorm:"column:nickname"`
+	Birthday     string `gorm:"column:birthday"`
+	Introduction string `gorm:"column:introduction"`
 	// 不使用time.Time，避免时区问题，统一使用 UTC 0毫秒数存储
 	CreatedAt int64 `gorm:"column:created_at;"`
 	UpdatedAt int64 `gorm:"column:updated_at;"`
@@ -56,7 +59,7 @@ func (dao *UserDAO) Insert(ctx context.Context, user User) error {
 }
 
 func (dao *UserDAO) FirstByEmail(ctx context.Context, email string) (user User, err error) {
-	err = dao.db.Where("email = ?", email).First(&user).Error
+	err = dao.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return user, ErrUnknownEmail
 	}
@@ -65,4 +68,17 @@ func (dao *UserDAO) FirstByEmail(ctx context.Context, email string) (user User, 
 	}
 
 	return user, nil
+}
+
+func (dao *UserDAO) Update(ctx context.Context, user User) error {
+	now := time.Now().UnixMilli()
+	user.UpdatedAt = now
+	err := dao.db.WithContext(ctx).Model(&user).
+		Where("id = ?", user.ID).Updates(map[string]interface{}{
+		"nickname":     user.Nickname,
+		"birthday":     user.Birthday,
+		"introduction": user.Introduction,
+		"updated_at":   now,
+	}).Error
+	return err
 }

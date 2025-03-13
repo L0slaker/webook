@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/l0slakers/webook/internal/domain"
@@ -20,6 +19,10 @@ type UserService struct {
 	repo *repository.UserRepository
 }
 
+func NewUserService(repo *repository.UserRepository) *UserService {
+	return &UserService{repo: repo}
+}
+
 func (svc *UserService) SignUp(ctx context.Context, u domain.User) error {
 	// 密码加密
 	pwd, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
@@ -31,7 +34,7 @@ func (svc *UserService) SignUp(ctx context.Context, u domain.User) error {
 	return svc.repo.Create(ctx, u)
 }
 
-func (svc *UserService) Login(ctx *gin.Context, email, password string) (domain.User, error) {
+func (svc *UserService) Login(ctx context.Context, email, password string) (domain.User, error) {
 	user, err := svc.repo.FindByEmail(ctx, email)
 	if err != nil {
 		return domain.User{}, err
@@ -45,6 +48,6 @@ func (svc *UserService) Login(ctx *gin.Context, email, password string) (domain.
 	return user, nil
 }
 
-func NewUserService(repo *repository.UserRepository) *UserService {
-	return &UserService{repo: repo}
+func (svc *UserService) Edit(ctx context.Context, user domain.User) error {
+	return svc.repo.Update(ctx, user)
 }

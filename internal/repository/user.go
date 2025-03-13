@@ -20,7 +20,10 @@ func NewUserService(userDao *dao.UserDAO) *UserRepository {
 }
 
 func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
-	return r.userDao.Insert(ctx, domainToDAO(u))
+	return r.userDao.Insert(ctx, dao.User{
+		Email:    u.Email,
+		Password: u.Password,
+	})
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
@@ -28,19 +31,18 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.
 	if err != nil {
 		return domain.User{}, err
 	}
-	return daoToDomain(u), nil
-}
-
-func domainToDAO(u domain.User) dao.User {
-	return dao.User{
-		Email:    u.Email,
-		Password: u.Password,
-	}
-}
-
-func daoToDomain(u dao.User) domain.User {
 	return domain.User{
+		ID:       u.ID,
 		Email:    u.Email,
 		Password: u.Password,
-	}
+	}, nil
+}
+
+func (r *UserRepository) Update(ctx context.Context, user domain.User) error {
+	return r.userDao.Update(ctx, dao.User{
+		ID:           user.ID,
+		Nickname:     user.Nickname,
+		Birthday:     user.BirthDay,
+		Introduction: user.Introduction,
+	})
 }
