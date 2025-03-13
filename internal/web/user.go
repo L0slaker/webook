@@ -174,7 +174,7 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	err := h.svc.Edit(ctx, domain.User{
 		ID:           uid,
 		Nickname:     req.Nickname,
-		BirthDay:     req.Birthday,
+		Birthday:     req.Birthday,
 		Introduction: req.Introduction,
 	})
 	switch err {
@@ -186,5 +186,25 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 }
 
 func (h *UserHandler) Info(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "用户个人信息：")
+	sess := sessions.Default(ctx)
+	uid := sess.Get("userId").(int64)
+
+	u, err := h.svc.Info(ctx, uid)
+	if err != nil {
+		ctx.String(http.StatusOK, systemErr)
+		return
+	}
+
+	type User struct {
+		Nickname     string `json:"nickname"`
+		Email        string `json:"email"`
+		Birthday     string `json:"birthday"`
+		Introduction string `json:"introduction"`
+	}
+	ctx.JSON(http.StatusOK, User{
+		Nickname:     u.Nickname,
+		Email:        u.Email,
+		Birthday:     u.Birthday,
+		Introduction: u.Introduction,
+	})
 }

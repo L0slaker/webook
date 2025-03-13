@@ -51,3 +51,7 @@ func (svc *UserService) Login(ctx context.Context, email, password string) (doma
 func (svc *UserService) Edit(ctx context.Context, user domain.User) error {
 	return svc.repo.Update(ctx, user)
 }
+
+func (svc *UserService) Info(ctx context.Context, uid int64) (domain.User, error) {
+	return svc.repo.FindByID(ctx, uid)
+}

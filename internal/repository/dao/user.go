@@ -70,6 +70,15 @@ func (dao *UserDAO) FirstByEmail(ctx context.Context, email string) (user User, 
 	return user, nil
 }
 
+func (dao *UserDAO) FirstByID(ctx context.Context, id int64) (user User, err error) {
+	err = dao.db.WithContext(ctx).Where("id = ?", id).First(&user).Error
+	if err != nil {
+		return user, err
+	}
+
+	return user, nil
+}
+
 func (dao *UserDAO) Update(ctx context.Context, user User) error {
 	now := time.Now().UnixMilli()
 	user.UpdatedAt = now

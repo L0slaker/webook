@@ -31,18 +31,33 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.
 	if err != nil {
 		return domain.User{}, err
 	}
-	return domain.User{
-		ID:       u.ID,
-		Email:    u.Email,
-		Password: u.Password,
-	}, nil
+	return daoToDomain(u), nil
 }
 
 func (r *UserRepository) Update(ctx context.Context, user domain.User) error {
 	return r.userDao.Update(ctx, dao.User{
 		ID:           user.ID,
 		Nickname:     user.Nickname,
-		Birthday:     user.BirthDay,
+		Birthday:     user.Birthday,
 		Introduction: user.Introduction,
 	})
+}
+
+func (r *UserRepository) FindByID(ctx context.Context, uid int64) (domain.User, error) {
+	u, err := r.userDao.FirstByID(ctx, uid)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return daoToDomain(u), nil
+}
+
+func daoToDomain(u dao.User) domain.User {
+	return domain.User{
+		ID:           u.ID,
+		Email:        u.Email,
+		Password:     u.Password,
+		Nickname:     u.Nickname,
+		Birthday:     u.Birthday,
+		Introduction: u.Introduction,
+	}
 }

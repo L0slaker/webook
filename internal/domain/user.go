@@ -5,6 +5,6 @@ type User struct {
 	Email        string
 	Password     string
 	Nickname     string
-	BirthDay     string
+	Birthday     string
 	Introduction string
 }
