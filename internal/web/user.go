@@ -10,13 +10,13 @@ import (
 
 const (
 	emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
-	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
+	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,30}$`
 )
 
 const (
 	systemErr     = "系统错误！"
 	emailMatchErr = "邮箱格式不正确！"
-	pwdMatchErr   = "密码格式不正确：至少8个字符，至少包含1个数字，一个字母和一个特殊字符"
+	pwdMatchErr   = "密码格式不正确：长度在8~30个字符，至少包含1个数字，一个字母和一个特殊字符"
 )
 
 type UserHandler struct {

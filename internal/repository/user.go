@@ -19,12 +19,9 @@ func (r *UserRepository) CreateUser(ctx context.Context, u domain.User) error {
 }
 
 func domainToDAOUser(u domain.User) dao.User {
-	//now := time.Now()
 	return dao.User{
 		//ID:        0,
 		Email:    u.Email,
 		Password: u.Password,
-		//CreatedAt: now,
-		//UpdatedAt: now,
 	}
 }
