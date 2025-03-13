@@ -14,6 +14,7 @@ const (
 
 var (
 	ErrDuplicateEmail = errors.New("该邮箱已被注册！")
+	ErrUnknownEmail   = errors.New("该邮箱不存在！")
 )
 
 type UserDAO struct {
@@ -41,15 +42,27 @@ func (User) TableName() string {
 	return "user"
 }
 
-func (u *UserDAO) Insert(ctx context.Context, user User) error {
+func (dao *UserDAO) Insert(ctx context.Context, user User) error {
 	now := time.Now().UnixMilli()
 	user.CreatedAt = now
 	user.UpdatedAt = now
 	// 唯一索引冲突
-	if err := u.db.WithContext(ctx).Create(&user).Error; err != nil {
+	if err := dao.db.WithContext(ctx).Create(&user).Error; err != nil {
 		if err.(*mysql.MySQLError).Number == uniqueIndexErr {
 			return ErrDuplicateEmail
 		}
 	}
 	return nil
+}
+
+func (dao *UserDAO) FirstByEmail(ctx context.Context, email string) (user User, err error) {
+	err = dao.db.Where("email = ?", email).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return user, ErrUnknownEmail
+	}
+	if err != nil {
+		return user, err
+	}
+
+	return user, nil
 }

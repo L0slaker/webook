@@ -2,6 +2,7 @@ package web
 
 import (
 	regexp "github.com/dlclark/regexp2"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/l0slakers/webook/internal/domain"
 	"github.com/l0slakers/webook/internal/service"
@@ -75,14 +76,46 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	case nil:
 		ctx.String(http.StatusOK, "注册成功！")
 	case service.ErrDuplicateEmail:
-		ctx.String(http.StatusOK, "邮箱已被注册！")
+		ctx.String(http.StatusOK, service.ErrDuplicateEmail.Error())
 	default:
 		ctx.String(http.StatusInternalServerError, systemErr)
 	}
 }
 
 func (h *UserHandler) Login(ctx *gin.Context) {
+	type LoginInfo struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req LoginInfo
+	if err := ctx.ShouldBind(&req); err != nil {
+		return
+	}
 
+	// TODO 其他校验（例如数字长度、格式等）
+
+	u, err := h.svc.Login(ctx, req.Email, req.Password)
+	switch err {
+	case nil:
+		// 设置登录态
+		sess := sessions.Default(ctx)
+		sess.Set("userId", u.ID)
+		// 设置登陆时间（以实际业务为准）
+		sess.Options(sessions.Options{
+			MaxAge: 900, // 十五分钟
+		})
+		err = sess.Save()
+		if err != nil {
+			ctx.String(http.StatusInternalServerError, systemErr)
+		}
+		ctx.String(http.StatusOK, "登陆成功！")
+	case service.ErrUnknownEmail:
+		ctx.String(http.StatusOK, service.ErrUnknownEmail.Error())
+	case service.ErrWrongInfo:
+		ctx.String(http.StatusOK, service.ErrWrongInfo.Error())
+	default:
+		ctx.String(http.StatusInternalServerError, systemErr)
+	}
 }
 
 func (h *UserHandler) Edit(ctx *gin.Context) {

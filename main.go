@@ -2,10 +2,10 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/l0slakers/webook/internal/middleware"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
-	"github.com/l0slakers/webook/internal/middleware"
 	"github.com/l0slakers/webook/internal/repository"
 	"github.com/l0slakers/webook/internal/repository/dao"
 	"github.com/l0slakers/webook/internal/service"
@@ -17,8 +17,9 @@ func main() {
 
 	db := initDB()
 
+	server.Use(middleware.RegisterMiddleware(server)...)
+
 	initUserHandler(db, server)
-	middleware.RegisterMiddleware(server)
 
 	server.Run(":8080")
 }
