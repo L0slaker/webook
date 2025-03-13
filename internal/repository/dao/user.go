@@ -2,8 +2,18 @@ package dao
 
 import (
 	"context"
+	"errors"
+	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 	"time"
+)
+
+const (
+	uniqueIndexErr uint16 = 1062 // 唯一索引冲突
+)
+
+var (
+	ErrDuplicateEmail = errors.New("该邮箱已被注册！")
 )
 
 type UserDAO struct {
@@ -35,5 +45,11 @@ func (u *UserDAO) Insert(ctx context.Context, user User) error {
 	now := time.Now().UnixMilli()
 	user.CreatedAt = now
 	user.UpdatedAt = now
-	return u.db.WithContext(ctx).Create(&user).Error
+	// 唯一索引冲突
+	if err := u.db.WithContext(ctx).Create(&user).Error; err != nil {
+		if err.(*mysql.MySQLError).Number == uniqueIndexErr {
+			return ErrDuplicateEmail
+		}
+	}
+	return nil
 }

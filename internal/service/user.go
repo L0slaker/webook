@@ -8,6 +8,8 @@ import (
 	"github.com/l0slakers/webook/internal/repository"
 )
 
+var ErrDuplicateEmail = repository.ErrDuplicateEmail
+
 type UserService struct {
 	repo *repository.UserRepository
 }
