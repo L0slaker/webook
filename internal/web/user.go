@@ -1,14 +1,21 @@
 package web
 
 import (
-	regexp "github.com/dlclark/regexp2"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-gonic/gin"
+	"net/http"
+	"time"
+
 	"github.com/l0slakers/webook/internal/domain"
 	pkgTime "github.com/l0slakers/webook/internal/pkg/time"
 	"github.com/l0slakers/webook/internal/service"
-	"net/http"
+
+	regexp "github.com/dlclark/regexp2"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
+
+// TODO key从配置文件中读取
+const JwtKey = "U2FsdGVkX19IDF17ov2HRI/9TlXkROBA"
 
 const (
 	emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
@@ -79,6 +86,65 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "注册成功！")
 	case service.ErrDuplicateEmail:
 		ctx.String(http.StatusOK, service.ErrDuplicateEmail.Error())
+	default:
+		ctx.String(http.StatusOK, systemErr)
+	}
+}
+
+func (h *UserHandler) LoginJWT(ctx *gin.Context) {
+	type LoginInfo struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req LoginInfo
+	if err := ctx.ShouldBind(&req); err != nil {
+		return
+	}
+
+	// 正则校验
+	isEmailMatch, err := h.emailRexExp.MatchString(req.Email)
+	if err != nil {
+		ctx.String(http.StatusOK, systemErr)
+		return
+	}
+	if !isEmailMatch {
+		ctx.String(http.StatusOK, emailMatchErr)
+		return
+	}
+	isPwdMatch, err := h.passwordRexExp.MatchString(req.Password)
+	if err != nil {
+		ctx.String(http.StatusOK, systemErr)
+		return
+	}
+	if !isPwdMatch {
+		ctx.String(http.StatusOK, pwdMatchErr)
+		return
+	}
+
+	u, err := h.svc.Login(ctx, req.Email, req.Password)
+	switch err {
+	case nil:
+		// 设置登录态
+		claim := UserClaim{
+			RegisteredClaims: jwt.RegisteredClaims{
+				// 十五分钟过期
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 15)),
+			},
+			UserID: u.ID,
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
+		tokenStr, err := token.SignedString([]byte(JwtKey))
+		if err != nil {
+			ctx.String(http.StatusOK, systemErr)
+			return
+		}
+		// 写入头部返回给前端
+		ctx.Header("x-jwt-token", tokenStr)
+		ctx.String(http.StatusOK, "登陆成功:"+tokenStr)
+	case service.ErrUnknownEmail:
+		ctx.String(http.StatusOK, service.ErrUnknownEmail.Error())
+	case service.ErrWrongInfo:
+		ctx.String(http.StatusOK, service.ErrWrongInfo.Error())
 	default:
 		ctx.String(http.StatusOK, systemErr)
 	}
@@ -171,10 +237,19 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 		}
 	}
 
-	sess := sessions.Default(ctx)
-	uid := sess.Get("userId").(int64)
+	// 使用session存储
+	//sess := sessions.Default(ctx)
+	//uid := sess.Get("userId").(int64)
+
+	val, ok := ctx.Get("user")
+	if !ok {
+		ctx.String(http.StatusOK, systemErr)
+		return
+	}
+	claim := val.(UserClaim)
+
 	err := h.svc.Edit(ctx, domain.User{
-		ID:           uid,
+		ID:           claim.UserID,
 		Nickname:     req.Nickname,
 		Birthday:     req.Birthday,
 		Introduction: req.Introduction,
@@ -188,10 +263,18 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 }
 
 func (h *UserHandler) Info(ctx *gin.Context) {
-	sess := sessions.Default(ctx)
-	uid := sess.Get("userId").(int64)
+	// 使用session存储
+	//sess := sessions.Default(ctx)
+	//uid := sess.Get("userId").(int64)
 
-	u, err := h.svc.Info(ctx, uid)
+	val, ok := ctx.Get("user")
+	if !ok {
+		ctx.String(http.StatusOK, systemErr)
+		return
+	}
+	claim := val.(UserClaim)
+
+	u, err := h.svc.Info(ctx, claim.UserID)
 	if err != nil {
 		ctx.String(http.StatusOK, systemErr)
 		return
@@ -209,4 +292,9 @@ func (h *UserHandler) Info(ctx *gin.Context) {
 		Birthday:     u.Birthday,
 		Introduction: u.Introduction,
 	})
+}
+
+type UserClaim struct {
+	jwt.RegisteredClaims
+	UserID int64
 }

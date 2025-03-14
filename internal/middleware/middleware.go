@@ -11,7 +11,7 @@ import (
 )
 
 func RegisterMiddleware(server *gin.Engine) []gin.HandlerFunc {
-	login := middleware.NewMiddlewareBuilder()
+	login := middleware.NewLoginMiddlewareBuilder()
 	// Session初始化
 	//store := cookie.NewStore([]byte("secret"))
 	//memstore.NewStore([]byte("secret"))
@@ -26,7 +26,7 @@ func RegisterMiddleware(server *gin.Engine) []gin.HandlerFunc {
 
 	return []gin.HandlerFunc{
 		corsMiddleware(),
-		sessions.Sessions("ssid", store), login.CheckLogin(),
+		sessions.Sessions("ssid", store), login.CheckLoginJWT(),
 	}
 }
 
@@ -40,7 +40,8 @@ func corsMiddleware() gin.HandlerFunc {
 		},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		AllowCredentials: true,
-		//ExposeHeaders:              nil,
-		MaxAge: 12 * time.Hour,
+		// 允许前端访问后端响应带的头部
+		ExposeHeaders: []string{"x-jwt-token"},
+		MaxAge:        12 * time.Hour,
 	})
 }

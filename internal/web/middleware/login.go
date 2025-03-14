@@ -5,17 +5,19 @@ import (
 	"fmt"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/l0slakers/webook/internal/web"
 	"net/http"
 	"time"
 )
 
-type MiddlewareBuilder struct{}
+type LoginMiddlewareBuilder struct{}
 
-func NewMiddlewareBuilder() *MiddlewareBuilder {
-	return &MiddlewareBuilder{}
+func NewLoginMiddlewareBuilder() *LoginMiddlewareBuilder {
+	return &LoginMiddlewareBuilder{}
 }
 
-func (m *MiddlewareBuilder) CheckLogin() gin.HandlerFunc {
+func (m *LoginMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 	// error gob: type not registered for interface: time.Time
 	gob.Register(time.Now()) // redis注册类型
 
@@ -47,9 +49,64 @@ func (m *MiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 			sess.Set("userId", userId)
 			err := sess.Save()
 			if err != nil {
+				// TODO 记录日志
 				// 不影响系统正常使用的记录日志即可
 				fmt.Println(err)
 			}
 		}
+	}
+}
+
+func (m *LoginMiddlewareBuilder) CheckLoginJWT() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		// 登录校验需要去除“注册”和“登录”两个接口
+		if ctx.Request.URL.Path == "/api/v1/user/signup" || ctx.Request.URL.Path == "/api/v1/user/login" {
+			return
+		}
+		// 用户未登录
+		tokenStr := ctx.GetHeader("x-jwt-token")
+		if tokenStr == "" {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		//segs := strings.Split(" ", authCode)
+		//if len(segs) != 2 {
+		//	// 传入的 Authentication 不正确
+		//	ctx.AbortWithStatus(http.StatusUnauthorized)
+		//	return
+		//}
+
+		//tokenStr := segs[1]
+		var claim web.UserClaim
+		token, err := jwt.ParseWithClaims(tokenStr, &claim, func(token *jwt.Token) (interface{}, error) {
+			return []byte(web.JwtKey), nil
+		})
+		if err != nil {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		// 校验token是否为空&是否过期
+		if token == nil || !token.Valid {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		// 刷新登录态：剩余过期时间<50s
+		if claim.ExpiresAt.Sub(time.Now()) < time.Second*50 {
+			claim.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 15))
+			tokenStr, err = token.SignedString([]byte(web.JwtKey))
+			if err != nil {
+				// TODO 记录日志
+				// 无需中断，仅仅是过期，不影响系统正常使用
+				fmt.Println(err)
+			}
+			// 写入头部返回给前端
+			ctx.Header("x-jwt-token", tokenStr)
+		}
+
+		// 方便其他功能使用
+		ctx.Set("user", claim)
 	}
 }
