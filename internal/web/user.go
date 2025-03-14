@@ -121,12 +121,14 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		sess := sessions.Default(ctx)
 		sess.Set("userId", u.ID)
 		// 设置登陆时间（以实际业务为准）
+		// TODO 通过配置文件来设置
 		sess.Options(sessions.Options{
-			MaxAge: 900, // 十五分钟
+			MaxAge: 900, // 单位:秒
 		})
 		err = sess.Save()
 		if err != nil {
 			ctx.String(http.StatusOK, systemErr)
+			return
 		}
 		ctx.String(http.StatusOK, "登陆成功！")
 	case service.ErrUnknownEmail:
