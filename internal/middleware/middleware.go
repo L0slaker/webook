@@ -29,7 +29,8 @@ func RegisterMiddleware(server *gin.Engine) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		corsMiddleware(),
 		sessions.Sessions("ssid", store), login.CheckLoginJWT(),
-		rateLimitMiddleware(),
+		// 压测关闭限流
+		//rateLimitMiddleware(),
 	}
 }
 
