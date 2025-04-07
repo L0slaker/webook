@@ -5,6 +5,8 @@
 
 ## 使用命令
     wrk -t1 -d1s -c2 -s ./script/wrk/signup.lua http://localhost:8080/api/v1/user/signup
+    wrk -t1 -d1s -c2 -s ./script/wrk/login.lua http://localhost:8080/api/v1/user/login
+    wrk -t1 -d1s -c2 -s ./script/wrk/profile.lua http://localhost:8080/api/v1/user/info
     -t 后跟着的是线程数量
     -d 后跟着的是持续时间
     -c 后跟着的是并发数
