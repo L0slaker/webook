@@ -16,5 +16,5 @@
     ```
 3. 运行脚本
     ```c
-    python insert_users.py
+    python3 million.py
     ```
